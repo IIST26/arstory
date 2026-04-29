@@ -1,23 +1,203 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.5.0/dist/aframe-extras.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-</head>
-<body style="margin:0; overflow:hidden;">
-  <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiScanning: false;" vr-mode-ui="enabled: false">
-    <a-assets>
-      <a-asset-item id="asset_id_cur1xwb1b" src="./Talkingg.glb"></a-asset-item>
-      <audio id="bg-audio" src="./ElevenLabs_2026-04-23T06_23_44_Gappu – Kids Cartoon Character Voice_pvc_sp100_s35_sb50_se0_b_m2.mp3" preload="auto"></audio>
-    </a-assets>
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-gltf-model src="#asset_id_cur1xwb1b" animation-mixer position="-0.005 -0.68 0.265" rotation="0 0 0" scale="0.009 0.009 0.009"></a-gltf-model>
-    </a-entity>
-        <a-entity sound="src: #bg-audio; autoplay: true; loop: true;"></a-entity>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { margin: 0; overflow: hidden; position: fixed; width: 100%; height: 100%; font-family: 'Poppins', sans-serif; }
+        
+        #quiz-outer-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; justify-content: center; align-items: center;
+            z-index: 9999; background: rgba(0, 0, 0, 0.7);
+        }
 
-  </a-scene>
+        #quiz-card {
+            width: 85%; max-width: 420px; background: #ffffff; padding: 25px;
+            border-radius: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); text-align: center;
+        }
+
+        #question-num { color: #3498db; font-weight: 800; font-size: 14px; text-transform: uppercase; margin-bottom: 10px; }
+        #question { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #2c3e50; line-height: 1.5; min-height: 60px; }
+        
+        .option-btn {
+            display: block; width: 100%; padding: 14px; margin: 10px 0;
+            border: 2px solid #f1f1f1; background: #fdfdfd; border-radius: 15px;
+            font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+            color: #34495e;
+        }
+
+        .correct-anim { background-color: #2ecc71 !important; color: white !important; border-color: #27ae60 !important; }
+        .wrong-anim { background-color: #e74c3c !important; color: white !important; border-color: #c0392b !important; }
+
+        #score-board {
+            position: fixed; top: 20px; left: 20px; background: #2c3e50; color: white;
+            padding: 10px 20px; border-radius: 50px; font-weight: bold; z-index: 10000;
+        }
+
+        .result-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; }
+        .timestamp { font-size: 12px; color: #7f8c8d; background: #f1f1f1; padding: 5px 10px; border-radius: 10px; display: inline-block; margin-bottom: 15px; }
+        .discount-msg { font-size: 16px; font-weight: 600; color: #2c3e50; margin: 10px 0; line-height: 1.4; }
+        .promo-val { font-size: 32px; font-weight: 900; color: #2ecc71; display: block; margin-top: 5px; }
+        
+        .coupon-box { 
+            background: #f9f9f9; padding: 15px; border: 2px dashed #bdc3c7; 
+            border-radius: 15px; margin-top: 10px;
+        }
+        .coupon-code { font-family: monospace; font-size: 22px; font-weight: bold; color: #2c3e50; }
+        
+        button.retry-btn {
+            margin-top: 20px; padding: 12px 30px; background: #2c3e50; 
+            color: white; border: none; border-radius: 15px; font-weight: bold; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="score-board">Correct: <span id="correct-count">0</span> / 10</div>
+
+    <div id="quiz-outer-container">
+        <div id="quiz-card">
+            <div id="quiz-content">
+                <div id="question-num">Question 1/10</div>
+                <div id="question">Loading...</div>
+                <div id="options"></div>
+            </div>
+
+            <div id="result-screen" style="display: none;">
+                <div id="result-title" class="result-title">முடிவு</div>
+                <div id="time-display" class="timestamp"></div>
+                
+                <p style="font-weight: 600; margin: 5px 0;">சரியான பதில்கள்: <span id="final-correct">0</span> / 10</p>
+                
+                <div id="discount-info" class="discount-msg"></div>
+                
+                <div id="coupon-area" style="display:none;" class="coupon-box">
+                    <p style="margin:0 0 5px 0; font-size: 11px; color: #7f8c8d;">VALID FOR TODAY ONLY:</p>
+                    <div class="coupon-code">IIST100WIN</div>
+                </div>
+                
+                <p style="font-size: 10px; margin-top: 15px; color: #95a5a6;">இந்த ஸ்கிரீன்ஷாட்டை கடை உரிமையாளரிடம் காட்டவும்.</p>
+                <button class="retry-btn" onclick="location.reload()">Retry Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no;" embedded vr-mode-ui="enabled: false">
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-entity id="gate-target" mindar-image-target="targetIndex: 0"></a-entity>
+    </a-scene>
+
+    <script>
+        const questionBank = [
+            { q: "IPv6 முகவரி எத்தனை பிட்களைக் கொண்டது?", a: ["128 Bits", "32 Bits", "64 Bits", "256 Bits"], c: "128 Bits" },
+            { q: "கணினியின் தந்தை யார்?", a: ["Charles Babbage", "Alan Turing", "Bill Gates", "Jobs"], c: "Charles Babbage" },
+            { q: "1 TB என்பது எத்தனை GB?", a: ["1024 GB", "1000 GB", "1100 GB", "512 GB"], c: "1024 GB" },
+            { q: "IIST அமைந்துள்ள வீதி எது?", a: ["Navalar Road", "Hospital Road", "Kandy Road", "Main Street"], c: "Navalar Road" },
+            { q: "கணினியின் தற்காலிக நினைவகம் எது?", a: ["RAM", "ROM", "Hard Disk", "Cache"], c: "RAM" },
+            { q: "WWW-ஐ உருவாக்கியவர் யார்?", a: ["Tim Berners-Lee", "Vint Cerf", "Larry Page", "Elon Musk"], c: "Tim Berners-Lee" },
+            { q: "Python உருவாக்கியவர் யார்?", a: ["Guido van Rossum", "Dennis Ritchie", "James Gosling", "Bjarne"], c: "Guido van Rossum" },
+            { q: "CPU-இன் வேகம் எதில் அளவிடப்படுகிறது?", a: ["Hertz", "Bits", "Bytes", "Amps"], c: "Hertz" },
+            { q: "எது ஒரு 'Open Source' OS?", a: ["Linux", "Windows", "macOS", "iOS"], c: "Linux" },
+            { q: "HTTP-இல் 'S' என்பதன் பொருள்?", a: ["Secure", "Simple", "Standard", "System"], c: "Secure" },
+            { q: "கணினியின் மூளை எது?", a: ["CPU", "RAM", "ALU", "Monitor"], c: "CPU" },
+            { q: "ஒரு Byte-இல் எத்தனை Bits உள்ளன?", a: ["8", "4", "16", "32"], c: "8" },
+            { q: "எது 'Input Device'?", a: ["Keyboard", "Monitor", "Printer", "Speaker"], c: "Keyboard" },
+            { q: "எது ஒரு Browser?", a: ["Chrome", "Windows", "Excel", "WhatsApp"], c: "Chrome" },
+            { q: "USB விரிவாக்கம் என்ன?", a: ["Universal Serial Bus", "Unit Serial Bus", "User Bus", "Smart Bus"], c: "Universal Serial Bus" },
+            { q: "IIST என்பதன் முழு வடிவம்?", a: ["Inst. of Informatic Skill Tech", "Info Tech", "India Tech", "Indust. Tech"], c: "Inst. of Informatic Skill Tech" },
+            { q: "PDF விரிவாக்கம் என்ன?", a: ["Portable Document Format", "Print File", "Personal Format", "Port File"], c: "Portable Document Format" },
+            { q: "எது சமூக வலைதளம் அல்ல?", a: ["Google Search", "Facebook", "Instagram", "Twitter"], c: "Google Search" },
+            { q: "எது நிரந்தர நினைவகம்?", a: ["Hard Disk", "RAM", "Cache", "Virtual"], c: "Hard Disk" },
+            { q: "GUI விரிவாக்கம்?", a: ["Graphical User Interface", "Global Info", "General User", "Guide Interface"], c: "Graphical User Interface" }
+        ];
+
+        let quizData = []; 
+        let currentIdx = 0;
+        let correctAnswers = 0;
+        let canClick = true;
+
+        const target = document.querySelector('#gate-target');
+        const quizUI = document.getElementById('quiz-outer-container');
+
+        function prepareQuiz() {
+            let shuffled = [...questionBank].sort(() => 0.5 - Math.random());
+            quizData = shuffled.slice(0, 10);
+            quizData.forEach(item => item.a.sort(() => 0.5 - Math.random()));
+        }
+
+        target.addEventListener("targetFound", () => {
+            if (currentIdx === 0) {
+                prepareQuiz();
+                quizUI.style.display = 'flex';
+                loadQuestion();
+            }
+        });
+
+        function loadQuestion() {
+            canClick = true;
+            const data = quizData[currentIdx];
+            document.getElementById('question-num').innerText = `Question ${currentIdx + 1}/10`;
+            document.getElementById('question').innerText = data.q;
+            const btnArea = document.getElementById('options');
+            btnArea.innerHTML = '';
+            data.a.forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'option-btn';
+                b.innerText = opt;
+                b.onclick = () => handleAnswer(b, opt, data.c);
+                btnArea.appendChild(b);
+            });
+        }
+
+        function handleAnswer(btn, selected, correct) {
+            if (!canClick) return;
+            canClick = false;
+            const allBtns = document.querySelectorAll('.option-btn');
+            if (selected === correct) {
+                btn.classList.add('correct-anim');
+                correctAnswers++;
+                document.getElementById('correct-count').innerText = correctAnswers;
+            } else {
+                btn.classList.add('wrong-anim');
+                allBtns.forEach(b => { if (b.innerText === correct) b.classList.add('correct-anim'); });
+            }
+            setTimeout(() => {
+                currentIdx++;
+                if (currentIdx < quizData.length) loadQuestion();
+                else showResult();
+            }, 1500);
+        }
+
+        function showResult() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('final-correct').innerText = correctAnswers;
+
+            // Security: Set current Date & Time
+            const now = new Date();
+            const timeStamp = now.toLocaleDateString() + " | " + now.toLocaleTimeString();
+            document.getElementById('time-display').innerText = timeStamp;
+
+            const resTitle = document.getElementById('result-title');
+            const discInfo = document.getElementById('discount-info');
+            const coupArea = document.getElementById('coupon-area');
+
+            if(correctAnswers === 10) {
+                resTitle.innerText = "அற்புதமான வெற்றி!";
+                resTitle.style.color = "#2ecc71";
+                discInfo.innerHTML = "LKR 500-க்கு மேல் பொருட்கள் வாங்கும்போது<br><span class='promo-val'>LKR 100 OFF</span>";
+                coupArea.style.display = 'block';
+            } else {
+                resTitle.innerText = "மீண்டும் முயற்சிப்போம்!";
+                resTitle.style.color = "#e74c3c";
+                discInfo.innerHTML = "<span style='color:#e74c3c'>தள்ளுபடி இல்லை</span><br><span style='font-size:11px'>10/10 எடுத்தால் மட்டுமே தள்ளுபடி உண்டு!</span>";
+                coupArea.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>
